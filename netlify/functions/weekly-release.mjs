@@ -1,4 +1,5 @@
 import { schedule } from "@netlify/functions";
+import { getStore } from "@netlify/blobs";
 
 // Every Friday at 02:00 UTC = 10:00 AM MYT (UTC+8)
 const CRON = "0 2 * * 5";
@@ -136,6 +137,16 @@ export const handler = schedule(CRON, async () => {
     return { statusCode: 500 };
   }
 
+  // Guard: only send once per Friday — prevents duplicate Slack messages
+  // if Netlify fires the function more than once (e.g. redeploy on same day)
+  const today = new Date().toISOString().split("T")[0];
+  const store = getStore({ name: "sent-dates", consistency: "strong" });
+  const alreadySent = await store.get(today);
+  if (alreadySent) {
+    console.log(`Already sent for ${today}, skipping.`);
+    return { statusCode: 200 };
+  }
+
   const thursday = getYesterdayDate();
   console.log(`Looking for release on ${thursday}`);
 
@@ -169,6 +180,7 @@ export const handler = schedule(CRON, async () => {
 
   console.log("Sending Slack message:\n", message);
   await sendSlackMessage(message, env);
+  await store.set(today, "sent");
 
   return { statusCode: 200 };
 });

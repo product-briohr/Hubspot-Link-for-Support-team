@@ -7,6 +7,7 @@
     "build": "echo 'No build step required'"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.4",
     "@netlify/functions": "^2.8.1"
   }
 }
