@@ -71,11 +71,17 @@ async function getTicketsWithHubspotLinks(versionName, env) {
 
   const hubspotRegex = /https:\/\/app\.hubspot\.com[^\s\])"<>]*/g;
   const seenUrls = new Set();
+  const seenKeys = new Set();
   const results = [];
 
   for (const issue of data.issues ?? []) {
+    // Skip duplicate Jira issues (defensive — Jira shouldn't return dupes)
+    if (seenKeys.has(issue.key)) continue;
+    seenKeys.add(issue.key);
+
     const description = extractTextFromAdf(issue.fields.description);
-    const links = [...description.matchAll(hubspotRegex)].map((m) => m[0]);
+    const links = [...description.matchAll(hubspotRegex)]
+      .map((m) => m[0].replace(/[.,]+$/, "").trim()); // strip trailing punctuation
 
     for (const url of links) {
       if (!seenUrls.has(url)) {
