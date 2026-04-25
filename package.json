@@ -1,0 +1,12 @@
+{
+  "name": "hubspot-link-for-support-team",
+  "version": "1.0.0",
+  "description": "Weekly Friday automation: find Jira release tickets with HubSpot links and post to Slack",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.8.1"
+  }
+}
