@@ -149,15 +149,13 @@ export const handler = schedule(CRON, async () => {
 
   let message;
   if (tickets.length === 0) {
-    message = `Hi team, no tickets with HubSpot links found in yesterday's release *${versionName}*.`;
+    message = `Hi team, no tickets with HubSpot links found in yesterday's release.`;
   } else {
     const lines = tickets.map(
       (t, i) => `${i + 1}. ${t.title}\n   ${t.url}`
     );
     message = [
       `Hi team, with yesterday's release, the following tickets have been updated to: Tech status = Deployed, Ticket Status: Re-engage client/support team clarification OR Resolved`,
-      ``,
-      `*${versionName}*`,
       ``,
       ...lines,
     ].join("\n");
