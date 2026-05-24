@@ -18,17 +18,12 @@ function log(level, step, msg, data = {}) {
   level === "ERROR" ? console.error(JSON.stringify(entry)) : console.log(JSON.stringify(entry));
 }
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+// ─── Date helper ──────────────────────────────────────────────────────────────
 // Runs Friday 02:00 UTC → yesterday (UTC) = Thursday → matches Jira release dates
 function getYesterdayDateUTC() {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().split("T")[0]; // YYYY-MM-DD
-}
-
-// Today's UTC date — fallback in case someone marked the release date as Friday
-function getTodayDateUTC() {
-  return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
 // ─── Jira helpers ─────────────────────────────────────────────────────────────
@@ -69,10 +64,8 @@ async function jiraPost(path, body, env) {
 // Find the qualifying release version for a given date.
 // Checks both unreleased and released versions — a version may still be marked
 // "unreleased" in Jira on Friday morning even though its releaseDate is Thursday.
-// Also checks today's date (Friday) as a fallback in case someone set the
-// releaseDate to Friday when marking the version as released.
-async function findRelease(thursday, friday, env) {
-  log("INFO", "JIRA", "Searching for release version", { thursday, friday, project: JIRA_PROJECT });
+async function findRelease(thursday, env) {
+  log("INFO", "JIRA", "Searching for release version", { releaseDate: thursday, project: JIRA_PROJECT });
 
   const unreleased = await jiraFetch(
     `/project/${JIRA_PROJECT}/version?status=unreleased&orderBy=-sequence&maxResults=50`,
@@ -85,7 +78,7 @@ async function findRelease(thursday, friday, env) {
   });
 
   for (const v of unreleasedList) {
-    if (v.releaseDate !== thursday && v.releaseDate !== friday) continue;
+    if (v.releaseDate !== thursday) continue;
     if (EXCLUDED_VERSION_PATTERNS.test(v.name)) {
       log("DEBUG", "JIRA", "Version skipped (excluded pattern)", { name: v.name });
       continue;
@@ -94,7 +87,7 @@ async function findRelease(thursday, friday, env) {
       log("DEBUG", "JIRA", "Version skipped (name pattern mismatch)", { name: v.name, expected: "X.XXX.0" });
       continue;
     }
-    log("INFO", "JIRA", "Qualifying version found in unreleased", { name: v.name, releaseDate: v.releaseDate });
+    log("INFO", "JIRA", "Qualifying version found in unreleased", { name: v.name });
     return v.name;
   }
 
@@ -110,10 +103,10 @@ async function findRelease(thursday, friday, env) {
   });
 
   for (const v of releasedList) {
-    if (v.releaseDate !== thursday && v.releaseDate !== friday) continue;
+    if (v.releaseDate !== thursday) continue;
     if (EXCLUDED_VERSION_PATTERNS.test(v.name)) continue;
     if (!VALID_VERSION_PATTERN.test(v.name)) continue;
-    log("INFO", "JIRA", "Qualifying version found in released", { name: v.name, releaseDate: v.releaseDate });
+    log("INFO", "JIRA", "Qualifying version found in released", { name: v.name });
     return v.name;
   }
 
@@ -254,15 +247,14 @@ export const handler = schedule(CRON, async () => {
     store = null;
   }
 
-  // Step 3 — Resolve dates to search (Thursday = yesterday, Friday = today as fallback)
+  // Step 3 — Resolve Thursday release date
   const thursday = getYesterdayDateUTC();
-  const friday = getTodayDateUTC();
-  log("INFO", "DATE", "Resolved search dates", { thursday, friday, utcNow: new Date().toISOString() });
+  log("INFO", "DATE", "Resolved Thursday date", { thursday, utcNow: new Date().toISOString() });
 
   // Step 4 — Find the Jira release version
   let versionName;
   try {
-    versionName = await findRelease(thursday, friday, env);
+    versionName = await findRelease(thursday, env);
   } catch (err) {
     log("ERROR", "JIRA", "Failed to search for release version", { error: err.message, stack: err.stack });
     return { statusCode: 500 };
