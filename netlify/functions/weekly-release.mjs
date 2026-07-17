@@ -477,7 +477,7 @@ export const handler = schedule(CRON, async () => {
     } else {
       const lines = tickets.map((t, i) => `${i + 1}. ${t.title}\n   ${t.url}`);
       message = [
-        `Hi Support, with yesterday's release (${versionName}), the following tickets will be updated by @product to:`,
+        `Hi Support, with yesterday's release (${versionName}), the following tickets will be updated by <!subteam^S04S66530SX> to:`,
         ``,
         `Tech Status = Deployed and Ticket Status = Re-engage client/support team for clarification or Resolved.`,
         ``,
